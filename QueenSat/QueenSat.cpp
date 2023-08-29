@@ -2,11 +2,9 @@
 #include <iostream>
 #include <chrono>
 
-// Aliases
-using Vector = Minisat::vec<Minisat::Lit>;
+using LitVector = Minisat::vec<Minisat::Lit>;
 
-// Utilities
-void atMostOneLiteralIsTrue(Minisat::Solver& solver, Vector const& literals)
+void atMostOneLiteralIsTrue(Minisat::Solver& solver, LitVector const& literals)
 {
   for (int i = 0; i < literals.size(); ++i) {
     for (int j = i + 1; j < literals.size(); ++j) {
@@ -15,12 +13,12 @@ void atMostOneLiteralIsTrue(Minisat::Solver& solver, Vector const& literals)
   }
 }
 
-void atLeastOneLiteralIsTrue(Minisat::Solver& solver, Vector const& literals)
+void atLeastOneLiteralIsTrue(Minisat::Solver& solver, LitVector const& literals)
 {
   solver.addClause(literals);
 }
 
-void exactlyOneLiteralIsTrue(Minisat::Solver& solver, Vector const& literals)
+void exactlyOneLiteralIsTrue(Minisat::Solver& solver, LitVector const& literals)
 {
   atLeastOneLiteralIsTrue(solver, literals);
   atMostOneLiteralIsTrue(solver, literals);
@@ -34,7 +32,7 @@ int toVar(int i, int j, int table_size)
 void addHorizontalEquations(Minisat::Solver& solver, int table_size)
 {
   for (int i = 0; i < table_size; ++i) {
-    Vector literals;
+    LitVector literals;
     for (int j = 0; j < table_size; ++j) {
       literals.push(Minisat::mkLit(toVar(i, j, table_size)));
     }
@@ -45,7 +43,7 @@ void addHorizontalEquations(Minisat::Solver& solver, int table_size)
 void addVerticalEquations(Minisat::Solver& solver, int table_size)
 {
   for (int i = 0; i < table_size; ++i) {
-    Vector literals;
+    LitVector literals;
     for (int j = 0; j < table_size; ++j) {
       literals.push(Minisat::mkLit(toVar(j, i, table_size)));
     }
@@ -57,7 +55,7 @@ void addDiagonalEquations(Minisat::Solver& solver, int table_size)
 {
   for (int i = -table_size; i < 2 * table_size; ++i) {
     for (int signus = -1; signus <= 1; ++signus) {
-      Vector literals;
+      LitVector literals;
       if (signus == 0) { continue; }
       for (int j = 0; j < table_size; ++j) {
         int x = i + signus * j;
