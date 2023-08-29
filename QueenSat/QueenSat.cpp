@@ -13,7 +13,6 @@ void atMostOneLiteralIsTrue(Minisat::Solver& solver, Vector const& literals)
       solver.addClause(~literals[i], ~literals[j]);
     }
   }
-
 }
 
 void atLeastOneLiteralIsTrue(Minisat::Solver& solver, Vector const& literals)
@@ -115,12 +114,12 @@ int main(int argc, char* argv[])
 {
   // Program arguments
   const int begin_table_size = (argc > 1) ? atoi(argv[1]) : 5;
-  const int end_table_size = (argc > 2) ? std::min(atoi(argv[2]), begin_table_size) : (begin_table_size + 1);
+  const int end_table_size = (argc > 2) ? atoi(argv[2]) : (begin_table_size + 1);
   const bool print_results = (argc > 3) ? atoi(argv[3]) > 0: true;
   std::cout << std::format("{0} starting at {1} and ending at {2}", (print_results ? "Calculate times" : "Print tables"), begin_table_size, end_table_size) << std::endl;
 
   // Operations
-  for (int i = 5; i < 100; ++i) {
+  for (int i = begin_table_size; i < end_table_size; ++i) {
     const auto start = std::chrono::steady_clock::now();
     solveFor(i, print_results);
     const auto end = std::chrono::steady_clock::now();
