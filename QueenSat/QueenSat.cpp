@@ -4,6 +4,20 @@
 
 using LitVector = Minisat::vec<Minisat::Lit>;
 
+/*
+ * Converts a (row, col) position of the board to a variable index.
+ */
+int toVar(int row, int col, int board_size)
+{
+  return row + col * board_size;
+}
+
+/*
+ * At most one literal is true.
+ * For two literals, the equation is: !a | !b = true
+ * This equation assures that both literal are not true at the same time.
+ * We can add this equation for each pair of literals of the list.
+ */
 void atMostOneLiteralIsTrue(Minisat::Solver& solver, LitVector const& literals)
 {
   for (int i = 0; i < literals.size(); ++i) {
@@ -13,54 +27,66 @@ void atMostOneLiteralIsTrue(Minisat::Solver& solver, LitVector const& literals)
   }
 }
 
+/*
+ * At least one literal is true.
+ * The equation is: v1 | v2 | v3 | ... | vn = true
+ * So we only have to add every variable to one equation.
+ */
 void atLeastOneLiteralIsTrue(Minisat::Solver& solver, LitVector const& literals)
 {
   solver.addClause(literals);
 }
 
+/*
+ * Exactly one literal is true.
+ */
 void exactlyOneLiteralIsTrue(Minisat::Solver& solver, LitVector const& literals)
 {
   atLeastOneLiteralIsTrue(solver, literals);
   atMostOneLiteralIsTrue(solver, literals);
 }
 
-int toVar(int i, int j, int table_size)
+/*
+ * Only one queen on each row.
+ */
+void addHorizontalEquations(Minisat::Solver& solver, int board_size)
 {
-  return i + j * table_size;
-}
-
-void addHorizontalEquations(Minisat::Solver& solver, int table_size)
-{
-  for (int i = 0; i < table_size; ++i) {
+  for (int row = 0; row < board_size; ++row) {
     LitVector literals;
-    for (int j = 0; j < table_size; ++j) {
-      literals.push(Minisat::mkLit(toVar(i, j, table_size)));
+    for (int col = 0; col < board_size; ++col) {
+      literals.push(Minisat::mkLit(toVar(row, col, board_size)));
     }
     exactlyOneLiteralIsTrue(solver, literals);
   }
 }
 
-void addVerticalEquations(Minisat::Solver& solver, int table_size)
+/*
+ * Only one queen on each column.
+ */
+void addVerticalEquations(Minisat::Solver& solver, int board_size)
 {
-  for (int i = 0; i < table_size; ++i) {
+  for (int col = 0; col < board_size; ++col) {
     LitVector literals;
-    for (int j = 0; j < table_size; ++j) {
-      literals.push(Minisat::mkLit(toVar(j, i, table_size)));
+    for (int row = 0; row < board_size; ++row) {
+      literals.push(Minisat::mkLit(toVar(row, col, board_size)));
     }
     exactlyOneLiteralIsTrue(solver, literals);
   }
 }
 
-void addDiagonalEquations(Minisat::Solver& solver, int table_size)
+/*
+ * Only one queen on each diagonal.
+ */
+void addDiagonalEquations(Minisat::Solver& solver, int board_size)
 {
-  for (int i = -table_size; i < 2 * table_size; ++i) {
+  for (int i = -board_size; i < 2 * board_size; ++i) {
     for (int signus = -1; signus <= 1; ++signus) {
       LitVector literals;
       if (signus == 0) { continue; }
-      for (int j = 0; j < table_size; ++j) {
+      for (int j = 0; j < board_size; ++j) {
         int x = i + signus * j;
-        if (x >= 0 && x < table_size) {
-          literals.push(Minisat::mkLit(toVar(x, j, table_size)));
+        if (x >= 0 && x < board_size) {
+          literals.push(Minisat::mkLit(toVar(x, j, board_size)));
         }
       }
       if (literals.size() > 1) {
@@ -70,13 +96,16 @@ void addDiagonalEquations(Minisat::Solver& solver, int table_size)
   }
 }
 
-void printSolution(const Minisat::Solver& solver, int table_size)
+/*
+ * Print the board using 'x' for queens and '-' for empty spaces.
+ */
+void printSolution(const Minisat::Solver& solver, int board_size)
 {
   using Minisat::lbool;
 
-  for (int i = 0; i < table_size; ++i) {
-    for (int j = 0; j < table_size; ++j) {
-      if (solver.modelValue(toVar(i, j, table_size)) == l_True) {
+  for (int i = 0; i < board_size; ++i) {
+    for (int j = 0; j < board_size; ++j) {
+      if (solver.modelValue(toVar(i, j, board_size)) == l_True) {
         std::cout << "x";
       }
       else { std::cout << "-"; }
@@ -85,39 +114,42 @@ void printSolution(const Minisat::Solver& solver, int table_size)
   }
 }
 
-void solveFor(int table_size, bool print_results)
+/*
+ * Calculat the solution.
+ */
+void solveFor(int board_size, bool print_results)
 {
   using Minisat::mkLit;
   using Minisat::lbool;
 
   // Init solver variables
   Minisat::Solver solver;
-  for (int i = 0; i < table_size * table_size; ++i) {
+  for (int i = 0; i < board_size * board_size; ++i) {
     solver.newVar();
   }
 
   // Add basic equations
-  addHorizontalEquations(solver, table_size);
-  addVerticalEquations(solver, table_size);
-  addDiagonalEquations(solver, table_size);
+  addHorizontalEquations(solver, board_size);
+  addVerticalEquations(solver, board_size);
+  addDiagonalEquations(solver, board_size);
 
   // Print solution
   const auto has_solution = solver.solve();
   if (has_solution && print_results) {
-    printSolution(solver, table_size);
+    printSolution(solver, board_size);
   }
 }
 
 int main(int argc, char* argv[])
 {
   // Program arguments
-  const int begin_table_size = (argc > 1) ? atoi(argv[1]) : 5;
-  const int end_table_size = (argc > 2) ? atoi(argv[2]) : (begin_table_size + 1);
+  const int begin_board_size = (argc > 1) ? atoi(argv[1]) : 5;
+  const int end_board_size = (argc > 2) ? atoi(argv[2]) : (begin_board_size + 1);
   const bool print_results = (argc > 3) ? atoi(argv[3]) > 0: true;
-  std::cout << std::format("{0} starting at {1} and ending at {2}", (print_results ? "Calculate times" : "Print tables"), begin_table_size, end_table_size) << std::endl;
+  std::cout << std::format("{0} starting at {1} and ending at {2}", (print_results ? "Calculate times" : "Print boards"), begin_board_size, end_board_size) << std::endl;
 
   // Operations
-  for (int i = begin_table_size; i < end_table_size; ++i) {
+  for (int i = begin_board_size; i < end_board_size; ++i) {
     const auto start = std::chrono::steady_clock::now();
     solveFor(i, print_results);
     const auto end = std::chrono::steady_clock::now();
